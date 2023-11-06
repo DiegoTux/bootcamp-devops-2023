@@ -74,8 +74,14 @@ cp -r $repo/app-295devops-travel/* /var/www/html
 sed -i "s/\$dbPassword = \"\";/\$dbPassword = \"codepass\";/" config.php
 echo "====================================="
 
+
+# STAGE 3: [Deploy]
 ### reload
 systemctl reload apache2
 
+
+# STAGE 4: [Notify]
+
 #Validar funcionamiento de php (agregar logica para que devuelva error si no da 200 por ejemplo)
 curl localhost/info.php
+
