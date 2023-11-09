@@ -71,9 +71,12 @@ sleep 1
 git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
 mv /var/www/html/index.html /var/www/html/index.html.bkp
 cp -r $repo/app-295devops-travel/* /var/www/html
-sed -i "s/\$dbPassword = \"\";/\$dbPassword = \"codepass\";/" config.php
+sed -i "s/\$dbPassword = \"\";/\$dbPassword = \"codepass\";/" /var/www/html/config.php
 echo "====================================="
 
+# Cambiar el orden de los índices en Apache
+echo -e "\n${LBLUE}Configurando Apache para priorizar index.php...${NC}"
+sed -i '/<IfModule mod_dir.c>/,/<\/IfModule>/ s/DirectoryIndex.*/DirectoryIndex index.php index.htm index.html index.cgi index.pl index.xhtml/' /etc/apache2/mods-enabled/dir.conf
 
 # STAGE 3: [Deploy]
 ### reload
