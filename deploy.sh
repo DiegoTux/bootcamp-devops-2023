@@ -38,15 +38,18 @@ done
 
 # STAGE 2: [Build]
 
+# se clona la clase 2 del ejercicio
+
+git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
  
-###Iniciando la base de datos y Apache
+### Iniciando la base de datos y Apache
     systemctl start mariadb
     systemctl enable mariadb
     systemctl start apache2
     systemctl enable apache2
 
  echo -e "\n${LBLUE}Configurando base de datos ...${NC}"
-###Configuracion de la base de datos 
+### Configuracion de la base de datos 
     mysql -e "
     CREATE DATABASE devopstravel;
     CREATE USER 'codeuser'@'localhost' IDENTIFIED BY 'codepass';
@@ -55,7 +58,7 @@ done
 
 ### Poblar la DB
 
-mysql < database/devopstravel.sql
+mysql < /bootcamp-devops-2023/app-295devops-travel/database/devopstravel.sql
 
 
 # Instalar codigo de la aplicacion
