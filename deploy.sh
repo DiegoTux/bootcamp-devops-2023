@@ -66,12 +66,14 @@ mysql < /bootcamp-devops-2023/app-295devops-travel/database/devopstravel.sql
 # Validar si existe el repo
 if [ -d "$repo" ]; then
     echo -e "\n${LBLUE}La carpeta $repo existe ...${NC}"
-    rm -rf $repo
+    git pull -b clase2-linux-bash https://github.com/roxsross/$repo.git
+else
+    git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
 fi
 
 echo -e "\n${LYELLOW}instalando WEB ...${NC}"
 sleep 1
-git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
+#git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
 mv /var/www/html/index.html /var/www/html/index.html.bkp
 cp -r $repo/app-295devops-travel/* /var/www/html
 sed -i "s/\$dbPassword = \"\";/\$dbPassword = \"codepass\";/" /var/www/html/config.php
