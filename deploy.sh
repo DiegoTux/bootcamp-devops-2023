@@ -1,95 +1,90 @@
-#!/bin/bash
-#Variable
-repo="bootcamp-devops-2023"
-USERID=$(id -u)
-#colores
-LRED='\033[1;31m'
-LGREEN='\033[1;32m'
-NC='\033[0m'
-LBLUE='\033[0;34m'
-LYELLOW='\033[1;33m'
+#Definimos colores para usar en el script
+#red=
+#blue=
+#green=
+repo=clase2-linux-bash
+carpeta=bootcamp-devops-2023
 
-
-
-if [ "${USERID}" -ne 0 ]; then
-    echo -e "\n${LRED}Este script debe con permisos de sudo o como root.${NC}"
+# Chequeamos si el usuario es root. Caso contrario no se avanzará con la ejecución del script
+if [[ "${USERID}" -ne "0" ]]; then
+    echo -e "\e[31;1;3mDebes ser usuario ROOT.\e[m"
     exit 1
-fi 
-
-# STAGE 1: [Init]
-
-
-# Actualizar el servidor
-echo "====================================="
-apt-get update
-echo -e "\n${LGREEN}El Servidor se encuentra Actualizado ...${NC}"
-
-
-
-# Verificar si los paquetes están instalados
-packages=("git" "apache2" "mariadb-server" "curl" "php" "libapache2-mod-php" "php-mysql" "php-mbstring" "php-zip" "php-gd" "php-json" "php-curl")
-
-for package in "${packages[@]}"; do
-    if ! dpkg -l | grep -q "^ii  $package"; then
-        echo -e "\n${LYELLOW}instalando $package...${NC}"
-        apt-get install -y $package
-    fi
-done
-
-# STAGE 2: [Build]
-
-# se clona la clase 2 del ejercicio
-
-git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
- 
-### Iniciando la base de datos y Apache
-    systemctl start mariadb
-    systemctl enable mariadb
-    systemctl start apache2
-    systemctl enable apache2
-
- echo -e "\n${LBLUE}Configurando base de datos ...${NC}"
-### Configuracion de la base de datos 
-    mysql -e "
-    CREATE DATABASE devopstravel;
-    CREATE USER 'codeuser'@'localhost' IDENTIFIED BY 'codepass';
-    GRANT ALL PRIVILEGES ON *.* TO 'codeuser'@'localhost';
-    FLUSH PRIVILEGES;"
-
-### Poblar la DB
-
-mysql < /bootcamp-devops-2023/app-295devops-travel/database/devopstravel.sql
-
-
-# Instalar codigo de la aplicacion
-
-# Validar si existe el repo
-if [ -d "$repo" ]; then
-    echo -e "\n${LBLUE}La carpeta $repo existe ...${NC}"
-    git pull -b clase2-linux-bash https://github.com/roxsross/$repo.git
-else
-    git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
 fi
 
-echo -e "\n${LYELLOW}instalando WEB ...${NC}"
-sleep 1
-#git clone -b clase2-linux-bash https://github.com/roxsross/$repo.git
-mv /var/www/html/index.html /var/www/html/index.html.bkp
-cp -r $repo/app-295devops-travel/* /var/www/html
+######### Stage 1: init ########
+
+# Verificamos que el servidor esté actualizado
+sudo apt-get update
+
+# Declaramos los paquetes a usar
+packages=(mariadb-server apache2 git php libapache2-mod-php php-mysql php-mbstring php-zip php-gd php-json php-curl) 
+
+# Verificar si X paquete se encuentra instalado. Caso contrario se procede a instalar el mismo
+for pkg in "${packages[@]}"; do
+	
+	if dpkg -s $pkg > /dev/null 2>&1; then
+    echo -e "\n\e[96m$pkg ya se encuentra instalado \033[0m\n"
+else
+    echo -e "\n\e[92mInstalando $pkg ...\033[0m\n"
+    apt install -y $pkg
+	fi
+	
+done
+
+######## Stage 2: Build ########
+
+# Validar si el repositorio de la aplicación no existe, realizar un git clone. 
+# y si existe un git pull
+
+if [ -d "$repo" ]; then
+    echo "La carpeta $repo existe"
+    git pull -b $repo https://github.com/roxsross/bootcamp-devops-2023.git
+else
+	git clone -b $repo https://github.com/roxsross/bootcamp-devops-2023.git 
+fi
+
+# Mover al directorio donde se guardar los archivos de configuración de apache /var/www/html/
+cp -r $carpeta/app-295devops-travel/* /var/www/html/
+
+# habilitar MariaDB
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
+# sudo systemctl status mariadb
+
+# Configurar la base de datos
+mysql -e "CREATE DATABASE devopstravel;
+CREATE USER 'codeuser'@'localhost' IDENTIFIED BY 'codepass';
+GRANT ALL PRIVILEGES ON *.* TO 'codeuser'@'localhost';
+FLUSH PRIVILEGES;"
+
+# Agregar datos a la database devopstravel Run sql script ruta: database
+mysql < $carpeta/app-295devops-travel/database/devopstravel.sql
+
+
+# Deploy and configure web
+sudo systemctl start apache2 
+sudo systemctl enable apache2
+
+# Configurar apache para que soporte extensión php
+# Con la configuración predeterminada de DirectoryIndex en Apache, un archivo denominado index.html 
+# siempre tendrá prioridad sobre un archivo index.php
+# Si desea cambiar este comportamiento, deberá editar el archivo /etc/apache2/mods-enabled/dir.conf y modificar el orden en el 
+# que el archivo index.php se enumera en la directiva DirectoryIndex:
+sudo echo "<IfModule mod_dir.c>
+        DirectoryIndex index.php index.html index.cgi index.pl index.xhtml index.htm
+</IfModule>" > /etc/apache2/mods-enabled/dir.conf
+
+# Se recarga apache para que los cambios tomen efecto
+sudo systemctl reload apache2
+
+# Se debe definir un comando sed que busque la línea:
+#
+# $dbPassword = ""; 
+# Y que la cambie por:
+# $dbPassword = "codepass";
+# Por último, indicar la ruta en donde se encuentra guardado este archivo que es /var/www/html/config.php 
 sed -i "s/\$dbPassword = \"\";/\$dbPassword = \"codepass\";/" /var/www/html/config.php
-echo "====================================="
 
-# Cambiar el orden de los índices en Apache
-echo -e "\n${LBLUE}Configurando Apache para priorizar index.php...${NC}"
-sed -i '/<IfModule mod_dir.c>/,/<\/IfModule>/ s/DirectoryIndex.*/DirectoryIndex index.php index.htm index.html index.cgi index.pl index.xhtml/' /etc/apache2/mods-enabled/dir.conf
-
-# STAGE 3: [Deploy]
-### reload
-systemctl reload apache2
-
-
-# STAGE 4: [Notify]
-
-#Validar funcionamiento de php (agregar logica para que devuelva error si no da 200 por ejemplo)
-curl localhost/info.php
+### STAGE 4: [Notify] ###
+# en el chat se puede encontrar el discord.sh en donde indica el token a donde apunta para hacer el webhook
 
